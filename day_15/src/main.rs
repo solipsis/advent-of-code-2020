@@ -8,7 +8,6 @@ fn main() {
         .collect();
 
     let mut state: HashMap<usize,usize> = HashMap::new();
-    println!("Nums: {:?}", nums);
 
     let mut turn: usize = 1;
     for i in 0..(nums.len()-1) {
@@ -27,7 +26,7 @@ fn main() {
             let prev_use = state[&prev];
             say = (turn-1) - prev_use;
         }
-        if turn == 2020 {
+        if turn == 30000000 {
             println!("Turn: {}, say: {}", turn, say);
             return
         }

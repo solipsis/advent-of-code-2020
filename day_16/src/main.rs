@@ -99,7 +99,6 @@ fn main() {
         for (idx, val) in ticket.iter().enumerate() {
             for key in constraints.keys() {
                 let blah: &(Range, Range) = constraints.get(key).unwrap();
-                //println!("{}", is_in_range(blah, &val));
                 if !is_in_range(blah, &val) {
                     remove_possibility(&mut fields, key.to_string(), idx);
                 }
@@ -159,7 +158,7 @@ fn main() {
         }
     }
 
-    println!("{:#?}", fields);
+    //println!("{:#?}", fields);
     println!("Part2: {}", product);
 }
 

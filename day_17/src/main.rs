@@ -5,6 +5,7 @@ struct Point {
     x: i32,
     y: i32,
     z: i32,
+    w: i32,
 }
 fn main() {
     let mut state: HashSet<Point> = HashSet::new();
@@ -15,30 +16,29 @@ fn main() {
     for (idx, line) in input.lines().enumerate() {
         for (c_idx, c) in line.chars().enumerate() {
             if c == '#' {
-                state.insert(Point { x: c_idx as i32, y: idx as i32, z: 0 });
+                state.insert(Point {
+                    x: c_idx as i32,
+                    y: idx as i32,
+                    z: 0,
+                    w: 0,
+                });
             }
         }
     }
-
-
-    /*
-    state.insert(Point { x: 1, y: 1, z: 0 });
-    state.insert(Point { x: 2, y: 1, z: 0 });
-    state.insert(Point { x: 3, y: 1, z: 0 });
-    state.insert(Point { x: 3, y: 2, z: 0 });
-    state.insert(Point { x: 2, y: 3, z: 0 });
-    */
 
     for _cycle in 0..6 {
         for point in &state {
             for x in &[-1, 0, 1] {
                 for y in &[-1, 0, 1] {
                     for z in &[-1, 0, 1] {
-                        to_consider.insert(Point {
-                            x: point.x + *x,
-                            y: point.y + *y,
-                            z: point.z + *z,
-                        });
+                        for w in &[-1, 0, 1] {
+                            to_consider.insert(Point {
+                                x: point.x + *x,
+                                y: point.y + *y,
+                                z: point.z + *z,
+                                w: point.w + *w,
+                            });
+                        }
                     }
                 }
             }
@@ -50,15 +50,18 @@ fn main() {
             for x in &[-1, 0, 1] {
                 for y in &[-1, 0, 1] {
                     for z in &[-1, 0, 1] {
-                        if *x == 0 && *y == 0 && *z == 0 {
-                            continue;
-                        }
-                        if state.contains(&Point {
-                            x: point.x + *x,
-                            y: point.y + *y,
-                            z: point.z + *z,
-                        }) {
-                            active_cnt += 1;
+                        for w in &[-1, 0, 1] {
+                            if *x == 0 && *y == 0 && *z == 0 && *w == 0 {
+                                continue;
+                            }
+                            if state.contains(&Point {
+                                x: point.x + *x,
+                                y: point.y + *y,
+                                z: point.z + *z,
+                                w: point.w + *w,
+                            }) {
+                                active_cnt += 1;
+                            }
                         }
                     }
                 }
@@ -76,20 +79,11 @@ fn main() {
             }
         }
 
-        println!("Cycle: {}", _cycle+1);
+        println!("Cycle: {}", _cycle + 1);
         println!("next_state {}", next_state.len());
         state = next_state.clone();
     }
 
-    /*
-    println!("{:?}", state);
-    println!("to_consider {:?} {}", to_consider, to_consider.len());
-    println!("next_state {:?} {}", next_state, next_state.len());
-    */
 }
 
-/*
-fn to_consider(state: &HashSet<Point>) -> HashSet<Point> {
 
-}
-*/

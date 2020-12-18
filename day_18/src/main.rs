@@ -6,19 +6,9 @@ fn main() {
     for line in input.lines() {
         sum += calc(line.to_string());
 
-        // for part 2, inject parens around each terms before and after each plus sign
         let terms: Vec<&str> = line.split(" ").collect();
-        let mut replaced: Vec<String> = terms.clone().iter().map(|x| x.to_string()).collect();
-        for (idx, term) in terms.iter().enumerate() {
-            //println!("term: {}", term);
-            if term.contains("+") {
-                replaced[idx-1].insert_str(0, "(");
-                replaced[idx+1].push_str(")");
-             //   println!("After replace: {} {}", replaced[idx-1], replaced[idx+1])
-            }
-        }
-        //let v2 = calc(replaced.join(" "));
-        sum_2 += calc(replaced.join(" "));
+        let replaced: Vec<String> = terms.clone().iter().map(|x| x.to_string()).collect();
+        sum_2 += calc_part_2(replaced.join(" "));
     }
 
     println!("Part1: {}", sum);
@@ -26,7 +16,7 @@ fn main() {
 }
 
 fn calc(eq: String) -> isize {
-    //println!("original: {}", eq);
+    println!("original: {}", eq);
     let mut eq: String = eq.clone();
     // repeatedly find rightmost lparen
     // calc until r paren
@@ -47,8 +37,29 @@ fn calc(eq: String) -> isize {
 
 }
 
+fn calc_part_2(eq: String) -> isize {
+    println!("original: {}", eq);
+    let mut eq: String = eq.clone();
+    // repeatedly find rightmost lparen
+    // calc until r paren
+    // replace with vals, remove parens, repeat.
+    loop {
+        let lparen = eq.rfind('(');
+        match lparen {
+            Some(idx) => {
+                let sub = &eq[idx..];
+                let rparen = sub.find(')').unwrap(); // assume exists?
+                let val = solve_part_2(sub[1..rparen].to_string());
+                eq.replace_range(idx..(idx+rparen+1), &val.to_string());
+            }
+            None => return solve_part_2(eq),
+        }
+    }
+}
+
+
 fn solve(eq: String) -> isize {
-    //println!("sub: {}", eq);
+    println!("sub: {}", eq);
     let terms: Vec<&str> = eq.split(" ").collect();
     let mut acc: isize = terms[0].parse().unwrap();
 
@@ -67,6 +78,39 @@ fn solve(eq: String) -> isize {
             }
         }
     }
-    //println!("res: {}", acc);
+    return acc;
+}
+
+fn solve_part_2(eq: String) -> isize {
+    println!("sub: {}", eq);
+    let mut terms: Vec<String> = eq.split(" ").map(|x| x.to_string()).collect();
+
+    // resolve addition first
+    let mut substituted: Vec<String> = terms.clone();
+    loop {
+        if !terms.contains(&"+".to_string()) {
+            break;
+        }
+        for (idx, term) in terms.iter().enumerate() {
+            if term.contains("+") {
+                let v: isize = terms[idx-1].parse::<isize>().unwrap() + terms[idx+1].parse::<isize>().unwrap();
+                substituted[idx] = v.to_string();
+                substituted.remove(idx-1);
+                substituted.remove(idx); // value shifted 1 left from previous op
+                break;
+            }
+        }
+        terms = substituted.clone();
+    }
+
+    // only multiplication is left
+    let mut acc: isize = terms[0].parse().unwrap();
+    for term in terms[1..].iter() {
+        if term.contains("*") {
+            continue;
+        }
+        let v: isize = term.parse().unwrap();
+        acc *= v;
+    }
     return acc;
 }

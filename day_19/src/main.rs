@@ -69,8 +69,9 @@ fn main() {
     }
    // println!("{:?}", rules);
   //  println!("---------------------------------");
-    let possibilities = enumerate(&rules, 0);
-  //  println!("possibilities: {:?}", possibilities);
+  /*
+    let possibilities = enumerate(&rules, 11);
+    println!("possibilities: {:?}", possibilities);
 
     let mut sum = 0;
     for message in segments[1].lines() {
@@ -79,10 +80,81 @@ fn main() {
         }
     }
     println!("sum: {}", sum);
+  */
+
+    // need to substring at least twice 42 42 31 is minimum string
+    // 31 can also appear n times
+
+    let set_8 = enumerate(&rules, 8);
+    let set_42 = enumerate(&rules, 42);
+    let set_31 = enumerate(&rules, 31);
+    println!("set_42: {:?}", &set_42);
+    //let set_11 = enumerate(&rules, 11);
+    //
+    let mut sum_p2 = 0;
+    for message in segments[1].lines() {
+        let mut substr: String = message.to_string().clone();
+        let mut prev_len: usize = 0;
+        let mut sub_cnt: usize = 0;
+        'outer: while prev_len != substr.len() {
+            prev_len = substr.len();
+            for prefix in &set_42 {
+                if substr.starts_with(prefix) {
+                    sub_cnt += 1;
+                    substr = substr.strip_prefix(prefix).unwrap().to_string();
+                }
+                if sub_cnt >= 2 {
+                    let mut tail_cpy = substr.clone();
+                    let mut prev_tail_len = 0;
+                    while prev_tail_len != tail_cpy.len() {
+                        prev_tail_len = tail_cpy.len();
+                        for tail_prefix in &set_31 {
+                            if tail_cpy.starts_with(tail_prefix) {
+                                tail_cpy = tail_cpy.strip_prefix(tail_prefix).unwrap().to_string();
+                                if tail_cpy.len() == 0 {
+                                    sum_p2 += 1;
+                                    // terminate this iteration
+                                     println!("matched: {}", message);
+                                    // prev_tail_len = tail_cpy.len();
+                                     //prev_len = substr.len();
+                                     break 'outer;
+                                }
+                            }
+                        }
+                    }
+                    /*
+                    if set_31.contains(&substr) {
+                        sum_p2 += 1;
+                        // terminate this iteration
+                        println!("matched: {}", message);
+                        prev_len = substr.len();
+                        break;
+                    }
+                    */
+                }
+            }
+        }
+
+
+
+    }
+    println!("part_2: {}", sum_p2);
+
+    // gather set of "42" rules
+
+    // gather set of "8" rules
+    // for each message {
+    //     if starts with something from 8 set {
+    //         substring and loop
+    //     }
+    // }
+
+    // gather set of "11" rules
+    // gather set of "42" rules?
 }
 
 fn enumerate(rules: &HashMap<usize,Rule>, id: usize) -> Vec<String> {
-    println!("enumerate({})", id);
+    //println!("enumerate({})", id);
     let rule = &rules[&id];
     let mut ret: Vec<String> = Vec::new();
     if rule.primitive != 'X' {
@@ -117,7 +189,9 @@ fn enumerate(rules: &HashMap<usize,Rule>, id: usize) -> Vec<String> {
     //                println!("sub_str: {}", sub_str);
                     let next = existing.to_owned() + &sub_str.to_owned();
     //                println!("next: {}", &next);
-                    new_sub_rule_strs.push(next);
+                    if next.len() < 100 {
+                        new_sub_rule_strs.push(next);
+                    }
                 }
             }
             sub_rule_strs = new_sub_rule_strs.clone();

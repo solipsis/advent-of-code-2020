@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 #[derive(Debug)]
 struct Rule {
@@ -11,6 +13,7 @@ fn main() {
     let input = std::fs::read_to_string("input.txt").unwrap();
     let segments: Vec<&str> = input.trim().split("\n\n").collect();
 
+    // Parse Rules
     for line in segments[0].lines() {
         // grab id
         let colon = line.find(":").unwrap();
@@ -61,21 +64,22 @@ fn main() {
         };
         rules.insert(id, rule);
     }
-      let possibilities = enumerate(&rules, 0);
-      //println!("possibilities: {:?}", possibilities);
 
-      let mut sum = 0;
-      for message in segments[1].lines() {
-          if possibilities.contains(&message.to_string()) {
-              sum += 1;
-          }
-      }
-      println!("Part1: {}", sum);
+    let mut memo: HashMap<usize, Vec<String>> = HashMap::new(); // memoize overlapping recursion
+    let mut sum = 0;
+    let possibilities: HashSet<String> = HashSet::from_iter(enumerate(&rules, 0, &mut memo).iter().cloned());
+    for message in segments[1].lines() {
+        if possibilities.contains(&message.to_string()) {
+            sum += 1;
+        }
+    }
+    println!("Part1: {}", sum);
+    println!("len: {}", possibilities.len());
 
     // 42 42 31 is minimum string
     // rules 8 + 11 made up entirely of combinations of sets 42 and 31
-    let mut set_42 = enumerate(&rules, 42);
-    let mut set_31 = enumerate(&rules, 31);
+    let mut set_42 = enumerate(&rules, 42, &mut memo);
+    let mut set_31 = enumerate(&rules, 31, &mut memo);
     set_42.sort();
     set_31.sort();
 
@@ -132,28 +136,29 @@ fn strip_prefix(message: &String, set: &Vec<String>) -> Option<String> {
 
 // TODO: should probably memoize this whole thing
 // create all possible rules starting from a given rule
-fn enumerate(rules: &HashMap<usize, Rule>, id: usize) -> Vec<String> {
-    let rule = &rules[&id];
-    let mut ret: Vec<String> = Vec::new();
-    if rule.primitive != 'X' {
-        ret.push(rule.primitive.to_string());
-        return ret;
+fn enumerate(rules: &HashMap<usize, Rule>, id: usize, memo: &mut HashMap<usize, Vec<String>>) -> Vec<String> {
+
+    if let Some(cached) = memo.get(&id) {
+        return cached.clone();
     }
 
     // zip together each set of rules with each possible sub-rule
     let mut strs: Vec<String> = Vec::new();
+    let rule = &rules[&id];
+
+    if rule.primitive != 'X' {
+        strs.push(rule.primitive.to_string());
+    }
 
     for rule_list in &rule.sub {
         let mut sub_rule_strs: Vec<String> = vec!["".to_string(); 1];
         for sub_rule in rule_list {
             let mut new_sub_rule_strs: Vec<String> = Vec::new();
-            let sub_strs = enumerate(rules, *sub_rule);
+            let sub_strs = enumerate(rules, *sub_rule, memo);
             for existing in &sub_rule_strs {
                 for sub_str in &sub_strs {
                     let next = existing.to_owned() + &sub_str.to_owned();
-                    if next.len() < 100 {
-                        new_sub_rule_strs.push(next);
-                    }
+                    new_sub_rule_strs.push(next);
                 }
             }
             sub_rule_strs = new_sub_rule_strs.clone();
@@ -163,6 +168,7 @@ fn enumerate(rules: &HashMap<usize, Rule>, id: usize) -> Vec<String> {
             strs.push(blah.clone());
         }
     }
-
+    // memoize and return
+    memo.insert(id, strs.clone());
     return strs;
 }

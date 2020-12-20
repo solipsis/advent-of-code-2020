@@ -89,74 +89,71 @@ fn main() {
     let mut results: HashSet<String> = HashSet::new();
 
     let set_8 = enumerate(&rules, 8);
-    let set_42 = enumerate(&rules, 42);
-    let set_31 = enumerate(&rules, 31);
-    //println!("set_42: {:?}", &set_42);
+    let mut set_42 = enumerate(&rules, 42);
+    let mut set_31 = enumerate(&rules, 31);
     //let set_11 = enumerate(&rules, 11);
-    //
+
+    set_42.sort();
+    set_31.sort();
+
+    println!("set_42: {:?}", set_42); 
+    println!("set_31: {:?}", set_31); 
     let mut sum_p2 = 0;
+
     for message in segments[1].lines() {
         let mut substr: String = message.to_string().clone();
         let mut prev_len: usize = 0;
-        let mut sub_cnt: usize = 0;
 
         'outer: while prev_len != substr.len() {
+            println!("outer----------------------------------");
+            println!("substr: {}", &substr);
             prev_len = substr.len();
-            strip_prefix(&substr.to_string(), &set_42);
-            for prefix in &set_42 {
-                if substr.starts_with(prefix) {
-                    sub_cnt += 1;
-                    substr = substr.strip_prefix(prefix).unwrap().to_string();
-                }
-                if sub_cnt >= 2 {
-                    let mut tail_cpy = substr.clone();
-                    let mut prev_tail_len = 0;
-                    let mut tail_cnt = 0;
+            // strip one "42" prefix if available else break to next message
+            match strip_prefix(&substr.to_string(), &set_42) {
+                Some(sub) => substr = sub,
+                None => break,
+            };
+            println!("stripped 8->42: {}", &substr);
 
-                    // strip n set 42 then n rule 31
-
-                    // repeatedly strip prefixes from the set of possible outcomes from rule 31
-                    // strip no more than sub_cnt - 1 prefixes
-                    while prev_tail_len != tail_cpy.len() && tail_cnt < sub_cnt - 1 {
-                        prev_tail_len = tail_cpy.len();
-                        for tail_prefix in &set_31 {
-                            if tail_cpy.starts_with(tail_prefix) {
-                                tail_cpy = tail_cpy.strip_prefix(tail_prefix).unwrap().to_string();
-                                tail_cnt += 1;
-                                if tail_cpy.len() == 0 {
-                                    sum_p2 += 1;
-                                    println!("matched: {}", message);
-                                    results.insert(message.to_string());
-                                    break 'outer;
-                                }
-                            }
-                        }
+            // strip n "42" prefixes and n "31" prefixes
+            'inner: for n in 1..10 {
+                println!("N: {}", n);
+                let mut rule_11_substr = substr.clone();
+                // 42
+                for _i in 0..n {
+                    match strip_prefix(&rule_11_substr.to_string(), &set_42) {
+                        Some(sub) => rule_11_substr = sub,
+                        None => continue 'inner,
                     }
+                }
+                println!("striped 11->42: {}", &rule_11_substr);
+                // 31
+                for _i in 0..n {
+                    match strip_prefix(&rule_11_substr.to_string(), &set_31) {
+                        Some(sub) => rule_11_substr = sub,
+                        None => continue 'inner,
+                    }
+                }
+                println!("stripped 11->31: {}", &rule_11_substr);
+
+                if rule_11_substr.len() == 0 {
+                    sum_p2 += 1;
+                    println!("matched: {}", message);
+                    results.insert(message.to_string());
+                    break 'outer;
                 }
             }
         }
     }
     println!("part_2: {}", sum_p2);
-    println!("results: {}", results.len());
-
-    // gather set of "42" rules
-
-    // gather set of "8" rules
-    // for each message {
-    //     if starts with something from 8 set {
-    //         substring and loop
-    //     }
-    // }
-
-    // gather set of "11" rules
-    // gather set of "42" rules?
 }
 
 fn strip_prefix(message: &String, set: &Vec<String>) -> Option<String> {
+    //println!("strip_prefix: {}, set: {:?}", message, set);
     for prefix in set {
         if message.starts_with(prefix) {
             let trimmed = message.clone().strip_prefix(prefix).unwrap().to_string();
-            return Some(trimmed)
+            return Some(trimmed);
         }
     }
     None

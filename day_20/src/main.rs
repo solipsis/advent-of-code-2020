@@ -11,6 +11,7 @@ struct Tile {
     orientation: u8,
 }
 
+#[derive(Debug, Clone)]
 struct Orientation {
     up: u16,
     left: u16,
@@ -23,8 +24,8 @@ const ROW_SIZE: usize = 3;
 const COL_SIZE: usize = 3;
 
 fn main() {
-    let test = 1;
-    let reversed = reverse_bits(test);
+    //let test = 1;
+    //let reversed = reverse_bits(test);
     //println!("{:#018b}", test);
     //println!("{:#018b}", reversed);
 
@@ -42,11 +43,16 @@ fn main() {
     for tile_str in input {
         let tile = parse_tile(tile_str.to_string());
         for edge in &tile.edges {
+            let inverse = edge_inverse(*edge);
             if !connected.contains_key(edge) {
                 connected.insert(*edge, HashSet::new());
             }
-            let links = connected.get_mut(edge).unwrap();
-            links.insert(tile.id);
+            if !connected.contains_key(&inverse) {
+                connected.insert(inverse, HashSet::new());
+            }
+            connected.get_mut(edge).unwrap().insert(tile.id);
+            connected.get_mut(&inverse).unwrap().insert(tile.id);
+
         }
         tiles.insert(tile.id, tile);
     }
@@ -82,65 +88,103 @@ fn attach_tile(
     connected: &HashMap<u16, HashSet<usize>>,
 ) {
     used.insert(id);
+
+    //println!("attach_tile -> used: {:?}", &used);
+    /*
+    if grid.len() == 5 {
+        println!("attach_tile -> used: {:?}", &used);
+        for x in grid.clone() {
+            println!("{}", x.0);
+            println!("Up: {:#012b}", x.1.up);
+            println!("Left: {:#012b}", x.1.left);
+            println!("Down: {:#012b}", x.1.down);
+            println!("Right: {:#012b}", x.1.right);
+        }
+    }
+    */
     //let mut tile = &tiles.get_mut(&id).unwrap();
 
-    let edges: Vec<u16> = tiles.get(&id).unwrap().edges.clone();
+    let mut edges: Vec<u16> = tiles.get(&id).unwrap().edges.clone();
 
-    // try each orientation
-    for orient in 0..4 {
-        edges.rotate_right(1);
+    // try flipped both directions
+    for _flip in 0..2 {
+        // try each orientation
+        for _orient in 0..4 {
+            edges.rotate_right(1);
 
-        let orientation = Orientation {
-            up: edges[0],
-            left: edges[1],
-            down: edges[2],
-            right: edges[3],
-        };
+            let orientation = Orientation {
+                up: edges[0],
+                left: edges[1],
+                down: edges[2],
+                right: edges[3],
+            };
 
-        let left_side = edges.get(((orient + 1) % 4) as usize).unwrap();
-        let right_side = edges.get(((orient + 3) % 4) as usize).unwrap();
-        let top_side = edges.get(orient as usize).unwrap();
+            // validate that we can put this piece here
+            let row = grid.len() / ROW_SIZE;
+            let col = grid.len() % COL_SIZE;
 
-        // validate that we can put this piece here
-        let row = grid.len() / ROW_SIZE;
-        let col = grid.len() % COL_SIZE;
-
-        // check if left side matches inverse of piece left of this
-        if row > 1 {
-            let left_tuple = &grid.last().unwrap();
-            let prev = &tiles.get(&left_tuple.0).unwrap();
-            let prev_right = prev.edges.get(((&left_tuple.1 + 3) % 4) as usize).unwrap();
-            if edge_inverse(*left_side) != *prev_right {
-                continue;
-            }
-        }
-        // check if top side matches piece above this
-        if col > 1 {
-            let above_tuple = &grid.last().unwrap();
-            let prev = &tiles.get(&above_tuple.0).unwrap();
-            let prev_bottom = prev.edges.get(((&above_tuple.1 + 2) % 4) as usize).unwrap();
-            if edge_inverse(*top_side) != *prev_bottom {
-                continue;
-            }
-        }
-
-        grid.push((id, orient.clone()));
-        println!("Grid: {:?}", grid);
-
-        if grid.len() == 9 {
-            panic!("hooray");
-        }
-
-        // check all pieces that have the inverse edge of the current right side
-        match connected.get(&edge_inverse(*right_side)) {
-            None => continue,
-            Some(connections) => {
-                for next_id in connections {
-                    attach_tile(*next_id, grid, used, tiles, connected);
+            // check if left side matches inverse of piece left of this
+            if col >= 1 {
+                let prev_edges = &grid.last().unwrap();
+                if edge_inverse(orientation.left) != prev_edges.1.right {
+                    continue;
                 }
             }
+            // check if top side matches piece above this
+            if row >= 1 {
+                let above_edges = &grid.get(grid.len() - ROW_SIZE).unwrap();
+                if edge_inverse(orientation.up) != above_edges.1.down {
+                    continue;
+                }
+            }
+
+            grid.push((id, orientation.clone()));
+            //println!("Grid: {:?}", grid);
+
+            if grid.len() == 9 {
+                println!("{} {} {} {}", grid[0].0, grid[2].0, grid[6].0, grid[8].0);
+                panic!("hooray");
+            }
+
+            
+            for next_id in tiles.keys() {
+
+                        if used.contains(&next_id) {
+                            continue;
+                        }
+                        attach_tile(*next_id, grid, used, tiles, connected);
+            }
+            /*
+            // check all pieces that have the inverse edge of the current right side
+            match connected.get(&edge_inverse(orientation.right)) {
+                None => (),
+                Some(connections) => {
+                    for next_id in tiles.keys() {
+                   // for next_id in connections {
+                        // don't reuse pieces
+                        if used.contains(&next_id) {
+                            continue;
+                        }
+                        attach_tile(*next_id, grid, used, tiles, connected);
+                    }
+                }
+            }
+            */
+            grid.pop();
         }
-        grid.pop();
+
+        // need a different flipping algorithm
+        // reverse all edges
+        // swap left and right
+        // flip the piece
+        for edge in edges.iter_mut() {
+            *edge = edge_inverse(*edge);
+        }
+        let tmp = edges[1]; //left
+        edges[1] = edges[3];
+        edges[3] = tmp;
+        
+
     }
 
     used.remove(&id);
@@ -204,8 +248,8 @@ fn run_to_num(run: Vec<u8>) -> u16 {
             num = num | (1 << ((PIECE_SIZE - 1) - idx));
         }
     }
-    println!("Num: {:#012b}", num);
-    println!("inv: {:#012b}", edge_inverse(num));
+    //println!("Num: {:#012b}", num);
+    //println!("inv: {:#012b}", edge_inverse(num));
     return num;
 }
 

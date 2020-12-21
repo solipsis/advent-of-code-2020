@@ -57,6 +57,10 @@ fn main() {
         }
         tiles.insert(tile.id, tile);
     }
+
+
+    let test_num = run_to_num(".#..#####.".as_bytes().to_vec());
+    println!("{:#?}", connected.get(&test_num));
     //println!("Size: {}", tiles.len());
    // panic!("x");
 
@@ -144,14 +148,14 @@ fn attach_tile(
             grid.push((id, orientation.clone()));
             //println!("Grid: {:?}", grid);
 
-            if grid.len() == 144 {
+            if grid.len() == ROW_SIZE * COL_SIZE {
                 println!("{}", grid.len());
                 println!("{}", grid[0].0 * grid[COL_SIZE-1].0 * grid[(ROW_SIZE-1)*COL_SIZE].0 * grid[(ROW_SIZE*COL_SIZE)-1].0);
                 println!("{} {} {} {}", grid[0].0, grid[COL_SIZE-1].0, grid[(ROW_SIZE-1)*COL_SIZE].0, grid[(ROW_SIZE*COL_SIZE)-1].0);
                 panic!("hooray");
             }
 
-            
+            /*
             for next_id in tiles.keys() {
 
                         if used.contains(&next_id) {
@@ -159,13 +163,21 @@ fn attach_tile(
                         }
                         attach_tile(*next_id, grid, used, tiles, connected);
             }
-            /*
-            // check all pieces that have the inverse edge of the current right side
-            match connected.get(&edge_inverse(orientation.right)) {
+            */
+            // check all pieces that could possible connect to this one
+            // different if next piece starts a new row
+            let candidates;
+            if col == COL_SIZE - 1 {
+                let row_starter = grid[row*ROW_SIZE].1.clone();
+                candidates = connected.get(&edge_inverse(row_starter.down));
+            } else {
+                candidates = connected.get(&edge_inverse(orientation.right));
+            }
+
+            match candidates {
                 None => (),
                 Some(connections) => {
-                    for next_id in tiles.keys() {
-                   // for next_id in connections {
+                    for next_id in connections {
                         // don't reuse pieces
                         if used.contains(&next_id) {
                             continue;
@@ -174,7 +186,6 @@ fn attach_tile(
                     }
                 }
             }
-            */
             grid.pop();
         }
 

@@ -20,8 +20,8 @@ struct Orientation {
 }
 
 const PIECE_SIZE: usize = 10;
-const ROW_SIZE: usize = 3;
-const COL_SIZE: usize = 3;
+const ROW_SIZE: usize = 12;
+const COL_SIZE: usize = 12;
 
 fn main() {
     //let test = 1;
@@ -31,6 +31,7 @@ fn main() {
 
     let input: Vec<String> = std::fs::read_to_string("input.txt")
         .unwrap()
+        .trim()
         .split("\n\n")
         .map(|x| x.to_string())
         .collect();
@@ -56,6 +57,8 @@ fn main() {
         }
         tiles.insert(tile.id, tile);
     }
+    //println!("Size: {}", tiles.len());
+   // panic!("x");
 
     let mut tile_keys: Vec<usize> = Vec::new();
     for key in tiles.keys() {
@@ -141,8 +144,10 @@ fn attach_tile(
             grid.push((id, orientation.clone()));
             //println!("Grid: {:?}", grid);
 
-            if grid.len() == 9 {
-                println!("{} {} {} {}", grid[0].0, grid[2].0, grid[6].0, grid[8].0);
+            if grid.len() == 144 {
+                println!("{}", grid.len());
+                println!("{}", grid[0].0 * grid[COL_SIZE-1].0 * grid[(ROW_SIZE-1)*COL_SIZE].0 * grid[(ROW_SIZE*COL_SIZE)-1].0);
+                println!("{} {} {} {}", grid[0].0, grid[COL_SIZE-1].0, grid[(ROW_SIZE-1)*COL_SIZE].0, grid[(ROW_SIZE*COL_SIZE)-1].0);
                 panic!("hooray");
             }
 

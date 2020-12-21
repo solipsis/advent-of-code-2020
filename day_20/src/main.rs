@@ -6,7 +6,7 @@ use transpose;
 #[derive(Debug, Clone)]
 struct Tile {
     id: usize,
-    edges: Vec<u16>,
+    edges: Vec<u16>, // treat each edge as 10 bits. Was probably an unneeded optimization
     data: Vec<u8>,
     orientation: u8,
 }
@@ -24,10 +24,6 @@ const ROW_SIZE: usize = 12;
 const COL_SIZE: usize = 12;
 
 fn main() {
-    //let test = 1;
-    //let reversed = reverse_bits(test);
-    //println!("{:#018b}", test);
-    //println!("{:#018b}", reversed);
 
     let input: Vec<String> = std::fs::read_to_string("input.txt")
         .unwrap()
@@ -40,7 +36,6 @@ fn main() {
     let mut connected: HashMap<u16, HashSet<usize>> = HashMap::new();
     let mut tiles: HashMap<usize, Tile> = HashMap::new();
 
-    //let mut tiles: Vec<Tile> = Vec::new();
     for tile_str in input {
         let tile = parse_tile(tile_str.to_string());
         for edge in &tile.edges {
@@ -58,12 +53,6 @@ fn main() {
         tiles.insert(tile.id, tile);
     }
 
-
-    let test_num = run_to_num(".#..#####.".as_bytes().to_vec());
-    println!("{:#?}", connected.get(&test_num));
-    //println!("Size: {}", tiles.len());
-   // panic!("x");
-
     let mut tile_keys: Vec<usize> = Vec::new();
     for key in tiles.keys() {
         tile_keys.push(key.clone());
@@ -77,14 +66,6 @@ fn main() {
     }
 
     println!("Fail");
-
-    // for each tile
-    //     for each orientatin
-    //         for each tile that can connect to right side
-    //             attach tile
-    //             if row > 0, also check that it matches with tile above (mod operation with edge)
-    //             if no more tiles to place, we are done
-    //
 }
 
 fn attach_tile(
@@ -94,26 +75,10 @@ fn attach_tile(
     tiles: &HashMap<usize, Tile>,
     connected: &HashMap<u16, HashSet<usize>>,
 ) {
-    used.insert(id);
-
-    //println!("attach_tile -> used: {:?}", &used);
-    /*
-    if grid.len() == 5 {
-        println!("attach_tile -> used: {:?}", &used);
-        for x in grid.clone() {
-            println!("{}", x.0);
-            println!("Up: {:#012b}", x.1.up);
-            println!("Left: {:#012b}", x.1.left);
-            println!("Down: {:#012b}", x.1.down);
-            println!("Right: {:#012b}", x.1.right);
-        }
-    }
-    */
-    //let mut tile = &tiles.get_mut(&id).unwrap();
-
+    used.insert(id); // TODO: Does rust have a defer equivalent?
     let mut edges: Vec<u16> = tiles.get(&id).unwrap().edges.clone();
 
-    // try flipped both directions
+    // try flipped both directions (flip at end of loop)
     for _flip in 0..2 {
         // try each orientation
         for _orient in 0..4 {
@@ -146,24 +111,13 @@ fn attach_tile(
             }
 
             grid.push((id, orientation.clone()));
-            //println!("Grid: {:?}", grid);
 
+            // We are done if all pieces have been placed
             if grid.len() == ROW_SIZE * COL_SIZE {
-                println!("{}", grid.len());
-                println!("{}", grid[0].0 * grid[COL_SIZE-1].0 * grid[(ROW_SIZE-1)*COL_SIZE].0 * grid[(ROW_SIZE*COL_SIZE)-1].0);
-                println!("{} {} {} {}", grid[0].0, grid[COL_SIZE-1].0, grid[(ROW_SIZE-1)*COL_SIZE].0, grid[(ROW_SIZE*COL_SIZE)-1].0);
+                println!("Part_1: {}", grid[0].0 * grid[COL_SIZE-1].0 * grid[(ROW_SIZE-1)*COL_SIZE].0 * grid[(ROW_SIZE*COL_SIZE)-1].0);
                 panic!("hooray");
             }
 
-            /*
-            for next_id in tiles.keys() {
-
-                        if used.contains(&next_id) {
-                            continue;
-                        }
-                        attach_tile(*next_id, grid, used, tiles, connected);
-            }
-            */
             // check all pieces that could possible connect to this one
             // different if next piece starts a new row
             let candidates;
@@ -189,18 +143,13 @@ fn attach_tile(
             grid.pop();
         }
 
-        // need a different flipping algorithm
-        // reverse all edges
-        // swap left and right
-        // flip the piece
+        // flip the piece by reversing all edges and swapping left+right
         for edge in edges.iter_mut() {
             *edge = edge_inverse(*edge);
         }
         let tmp = edges[1]; //left
         edges[1] = edges[3];
         edges[3] = tmp;
-        
-
     }
 
     used.remove(&id);
@@ -213,7 +162,6 @@ fn parse_tile(tile_str: String) -> Tile {
         .unwrap()
         .parse()
         .unwrap();
-    // println!("\n-----------------------------------------\nid: {}", id);
 
     //let mut data: Vec<Vec<char>> = Vec::new();
     lines = lines[1..].to_vec();
@@ -227,9 +175,6 @@ fn parse_tile(tile_str: String) -> Tile {
     let bottom: u16 = run_to_num(data[..PIECE_SIZE].to_vec());
     data = rotate_piece(data);
     let right: u16 = run_to_num(data[..PIECE_SIZE].to_vec());
-
-    // back to start
-    data = rotate_piece(data);
 
     return Tile {
         id,
@@ -246,31 +191,21 @@ fn rotate_piece(data: Vec<u8>) -> Vec<u8> {
     for x in 0..PIECE_SIZE {
         transposed[x * PIECE_SIZE..(PIECE_SIZE + x * PIECE_SIZE)].reverse();
     }
-
-    /*
-    for row in transposed.chunks(PIECE_SIZE) {
-        let s = str::from_utf8(row).unwrap();
-        println!("{:?}", s);
-    }
-    */
-    return transposed;
+    transposed
 }
 
 fn run_to_num(run: Vec<u8>) -> u16 {
-    //println!("Run: {}", run);
     let mut num: u16 = 0;
     for (idx, b) in run.iter().enumerate() {
         if *b == '#' as u8 {
             num = num | (1 << ((PIECE_SIZE - 1) - idx));
         }
     }
-    //println!("Num: {:#012b}", num);
-    //println!("inv: {:#012b}", edge_inverse(num));
-    return num;
+    num
 }
 
 fn edge_inverse(edge: u16) -> u16 {
-    return reverse_bits(edge) >> 6;
+    reverse_bits(edge) >> 6
 }
 
 fn reverse_bits(x: u16) -> u16 {

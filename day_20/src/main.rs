@@ -24,7 +24,6 @@ const ROW_SIZE: usize = 12;
 const COL_SIZE: usize = 12;
 
 fn main() {
-
     let input: Vec<String> = std::fs::read_to_string("input.txt")
         .unwrap()
         .trim()
@@ -48,7 +47,6 @@ fn main() {
             }
             connected.get_mut(edge).unwrap().insert(tile.id);
             connected.get_mut(&inverse).unwrap().insert(tile.id);
-
         }
         tiles.insert(tile.id, tile);
     }
@@ -77,6 +75,7 @@ fn attach_tile(
 ) {
     used.insert(id); // TODO: Does rust have a defer equivalent?
     let mut edges: Vec<u16> = tiles.get(&id).unwrap().edges.clone();
+
 
     // try flipped both directions (flip at end of loop)
     for _flip in 0..2 {
@@ -114,15 +113,22 @@ fn attach_tile(
 
             // We are done if all pieces have been placed
             if grid.len() == ROW_SIZE * COL_SIZE {
-                println!("Part_1: {}", grid[0].0 * grid[COL_SIZE-1].0 * grid[(ROW_SIZE-1)*COL_SIZE].0 * grid[(ROW_SIZE*COL_SIZE)-1].0);
-                panic!("hooray");
+                println!(
+                    "Part_1: {}",
+                    grid[0].0
+                        * grid[COL_SIZE - 1].0
+                        * grid[(ROW_SIZE - 1) * COL_SIZE].0
+                        * grid[(ROW_SIZE * COL_SIZE) - 1].0
+                );
+               // panic!("hooray");
+               part_2(grid, tiles);
             }
 
             // check all pieces that could possible connect to this one
             // different if next piece starts a new row
             let candidates;
             if col == COL_SIZE - 1 {
-                let row_starter = grid[row*ROW_SIZE].1.clone();
+                let row_starter = grid[row * ROW_SIZE].1.clone();
                 candidates = connected.get(&edge_inverse(row_starter.down));
             } else {
                 candidates = connected.get(&edge_inverse(orientation.right));
@@ -153,6 +159,124 @@ fn attach_tile(
     }
 
     used.remove(&id);
+}
+
+fn part_2(grid: &mut Vec<(usize, Orientation)>, tiles: &HashMap<usize, Tile>) {
+    // mega image 8x8 * 12 * 12
+    // for each tile in our unstripped image
+    //     figure out the orientation
+    //         print appropriately to mega image
+    let mut complete: Vec<u8> = vec!['_' as u8; 8 * 8 * (COL_SIZE * ROW_SIZE)];
+    for (idx, piece) in grid.iter().enumerate() {
+        let tile = tiles.get(&piece.0).unwrap();
+        let mut data = tile.data.clone();
+        // keep rotating until it matches our intended format
+        'outer: for _flip in 0..2 {
+            for _rotate in 0..4 {
+                data = rotate_piece(data);
+                if run_to_num(data[..PIECE_SIZE].to_vec()) == piece.1.up {
+                    // strip frame from image
+                    let mut stripped = Vec::new();
+                    for (idx, b) in data.iter().enumerate() {
+                        let sub_col = idx % PIECE_SIZE;
+                        let sub_row = idx / PIECE_SIZE;
+                        if sub_row == 0 || sub_row == 9 || sub_col == 0 || sub_col == 9 {
+                            continue
+                        }
+                        stripped.push(*b);
+                    }
+                    data = stripped;
+                    break 'outer;
+                }
+            }
+
+            // flip the piece by reversing all rows
+            for row in data.chunks_mut(10) {
+                row.reverse();
+            }
+        }
+
+        // calc piece row / column
+        // multiply by sub_rows + sub_cols
+        // add to mega image
+        //
+        let row = idx / ROW_SIZE;
+        let col = idx % COL_SIZE;
+        let sub_row_size = ROW_SIZE * 8;
+        let base = (row * ROW_SIZE * 64) + (col * 8);
+        for (idx, b) in data.iter().enumerate() {
+            let sub_col = idx % 8;
+            let sub_row = idx / 8;
+            
+            let pixel_idx = base + sub_col + (sub_row*sub_row_size);
+            complete[pixel_idx] = *b;
+        }
+    }
+
+
+    for line in complete.chunks_mut(ROW_SIZE*8) {
+        line.reverse();
+    }
+    complete = rotate_image(complete);
+    //complete = rotate_image(complete);
+    //complete = rotate_image(complete);
+
+    // print
+    /*
+    for line in complete.chunks(ROW_SIZE*8) {
+        println!("{}", str::from_utf8(line).unwrap());
+    }
+    */
+    // search for monstros
+    //                   # 
+    // #    ##    ##    ###
+    //  #  #  #  #  #  #   
+    let monster_offsets: Vec<(usize, isize)> = vec![
+        (18,-1),
+        (0,0), (5,0), (6,0), (11,0), (12, 0), (17,0), (18, 0), (19, 0),
+        (1,1), (4,1), (7,1), (10,1), (13, 1), (16,1)
+    ];
+    let monster_length = 20;
+    //let monster_height = 3;
+    let pixel_row_size = ROW_SIZE * 8;
+    'search: for idx in 0..complete.len() {
+    //'outer: for (idx, pixel) in complete.iter_mut().enumerate() {
+        let row = idx / pixel_row_size;
+        let col = idx % pixel_row_size;
+
+        // ignore if not enough room for monster
+        if row == 0 || col > (pixel_row_size+1) - monster_length || row >= (complete.len() / pixel_row_size) - 1 {
+            continue;
+        }
+
+        for offset in &monster_offsets {
+            //println!("{}", (pixel_row_size as isize));
+            //println!("{}", (10000 + (pixel_row_size as isize*offset.1)) as usize);
+            let adjusted = ((idx + offset.0) as isize + (pixel_row_size as isize*offset.1)) as usize;
+            //let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
+            if complete[adjusted] != '#' as u8 {
+                continue 'search;
+            }
+        }
+        for offset in &monster_offsets {
+            let adjusted = ((idx + offset.0) as isize + (pixel_row_size as isize*offset.1)) as usize;
+           // let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
+            complete[adjusted] = 'O' as u8;
+        }
+    }
+
+    for line in complete.chunks(ROW_SIZE*8) {
+        println!("{}", str::from_utf8(line).unwrap());
+    }
+    let mut sum = 0;
+    for u in complete {
+        if u == '#' as u8 {
+            sum += 1;
+        }
+    }
+    println!("Part2: {}", sum);
+    panic!("done");
+
 }
 
 fn parse_tile(tile_str: String) -> Tile {
@@ -190,6 +314,17 @@ fn rotate_piece(data: Vec<u8>) -> Vec<u8> {
     transpose::transpose(&data, &mut transposed, PIECE_SIZE, PIECE_SIZE);
     for x in 0..PIECE_SIZE {
         transposed[x * PIECE_SIZE..(PIECE_SIZE + x * PIECE_SIZE)].reverse();
+    }
+    transposed
+}
+
+fn rotate_image(data: Vec<u8>) -> Vec<u8> {
+    let mut transposed: Vec<u8> = Vec::with_capacity(data.len());
+    transposed.resize(data.len(), 0);
+    transpose::transpose(&data, &mut transposed, ROW_SIZE*8, COL_SIZE*8);
+
+    for line in transposed.chunks_mut(ROW_SIZE*8) {
+        line.reverse();
     }
     transposed
 }

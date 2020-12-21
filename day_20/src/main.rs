@@ -76,7 +76,6 @@ fn attach_tile(
     used.insert(id); // TODO: Does rust have a defer equivalent?
     let mut edges: Vec<u16> = tiles.get(&id).unwrap().edges.clone();
 
-
     // try flipped both directions (flip at end of loop)
     for _flip in 0..2 {
         // try each orientation
@@ -120,8 +119,8 @@ fn attach_tile(
                         * grid[(ROW_SIZE - 1) * COL_SIZE].0
                         * grid[(ROW_SIZE * COL_SIZE) - 1].0
                 );
-               // panic!("hooray");
-               part_2(grid, tiles);
+                // panic!("hooray");
+                part_2(grid, tiles);
             }
 
             // check all pieces that could possible connect to this one
@@ -181,7 +180,7 @@ fn part_2(grid: &mut Vec<(usize, Orientation)>, tiles: &HashMap<usize, Tile>) {
                         let sub_col = idx % PIECE_SIZE;
                         let sub_row = idx / PIECE_SIZE;
                         if sub_row == 0 || sub_row == 9 || sub_col == 0 || sub_col == 9 {
-                            continue
+                            continue;
                         }
                         stripped.push(*b);
                     }
@@ -207,76 +206,97 @@ fn part_2(grid: &mut Vec<(usize, Orientation)>, tiles: &HashMap<usize, Tile>) {
         for (idx, b) in data.iter().enumerate() {
             let sub_col = idx % 8;
             let sub_row = idx / 8;
-            
-            let pixel_idx = base + sub_col + (sub_row*sub_row_size);
+
+            let pixel_idx = base + sub_col + (sub_row * sub_row_size);
             complete[pixel_idx] = *b;
         }
     }
 
+    // look in all orientations for sea monsters
+    for _flip in 0..2 {
+        for _rot in 0..4 {
+            // search for monstros
+            //                   #
+            // #    ##    ##    ###
+            //  #  #  #  #  #  #
+            let monster_offsets: Vec<(usize, isize)> = vec![
+                (18, -1),
+                (0, 0),
+                (5, 0),
+                (6, 0),
+                (11, 0),
+                (12, 0),
+                (17, 0),
+                (18, 0),
+                (19, 0),
+                (1, 1),
+                (4, 1),
+                (7, 1),
+                (10, 1),
+                (13, 1),
+                (16, 1),
+            ];
+            let monster_length = 20;
+            let mut monsters_found = false;
+            let pixel_row_size = ROW_SIZE * 8;
+            'search: for idx in 0..complete.len() {
+                //'outer: for (idx, pixel) in complete.iter_mut().enumerate() {
+                let row = idx / pixel_row_size;
+                let col = idx % pixel_row_size;
 
-    for line in complete.chunks_mut(ROW_SIZE*8) {
-        line.reverse();
-    }
-    complete = rotate_image(complete);
-    //complete = rotate_image(complete);
-    //complete = rotate_image(complete);
+                // ignore if not enough room for monster
+                if row == 0
+                    || col > (pixel_row_size + 1) - monster_length
+                    || row >= (complete.len() / pixel_row_size) - 1
+                {
+                    continue;
+                }
 
-    // print
-    /*
-    for line in complete.chunks(ROW_SIZE*8) {
-        println!("{}", str::from_utf8(line).unwrap());
-    }
-    */
-    // search for monstros
-    //                   # 
-    // #    ##    ##    ###
-    //  #  #  #  #  #  #   
-    let monster_offsets: Vec<(usize, isize)> = vec![
-        (18,-1),
-        (0,0), (5,0), (6,0), (11,0), (12, 0), (17,0), (18, 0), (19, 0),
-        (1,1), (4,1), (7,1), (10,1), (13, 1), (16,1)
-    ];
-    let monster_length = 20;
-    //let monster_height = 3;
-    let pixel_row_size = ROW_SIZE * 8;
-    'search: for idx in 0..complete.len() {
-    //'outer: for (idx, pixel) in complete.iter_mut().enumerate() {
-        let row = idx / pixel_row_size;
-        let col = idx % pixel_row_size;
+                for offset in &monster_offsets {
+                    //println!("{}", (pixel_row_size as isize));
+                    //println!("{}", (10000 + (pixel_row_size as isize*offset.1)) as usize);
+                    let adjusted =
+                        ((idx + offset.0) as isize + (pixel_row_size as isize * offset.1)) as usize;
+                    //let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
+                    if complete[adjusted] != '#' as u8 {
+                        continue 'search;
+                    }
+                }
+                monsters_found = true;
 
-        // ignore if not enough room for monster
-        if row == 0 || col > (pixel_row_size+1) - monster_length || row >= (complete.len() / pixel_row_size) - 1 {
-            continue;
-        }
-
-        for offset in &monster_offsets {
-            //println!("{}", (pixel_row_size as isize));
-            //println!("{}", (10000 + (pixel_row_size as isize*offset.1)) as usize);
-            let adjusted = ((idx + offset.0) as isize + (pixel_row_size as isize*offset.1)) as usize;
-            //let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
-            if complete[adjusted] != '#' as u8 {
-                continue 'search;
+                // mark it on image
+                for offset in &monster_offsets {
+                    let adjusted =
+                        ((idx + offset.0) as isize + (pixel_row_size as isize * offset.1)) as usize;
+                    // let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
+                    complete[adjusted] = 'O' as u8;
+                }
             }
-        }
-        for offset in &monster_offsets {
-            let adjusted = ((idx + offset.0) as isize + (pixel_row_size as isize*offset.1)) as usize;
-           // let adjusted = (idx + offset.0) + (pixel_row_size*offset.1);
-            complete[adjusted] = 'O' as u8;
-        }
-    }
 
-    for line in complete.chunks(ROW_SIZE*8) {
-        println!("{}", str::from_utf8(line).unwrap());
-    }
-    let mut sum = 0;
-    for u in complete {
-        if u == '#' as u8 {
-            sum += 1;
+            // we are done
+            if monsters_found {
+                for line in complete.chunks(ROW_SIZE * 8) {
+                    println!("{}", str::from_utf8(line).unwrap());
+                }
+                let mut sum = 0;
+                for u in complete {
+                    if u == '#' as u8 {
+                        sum += 1;
+                    }
+                }
+                println!("Part2: {}", sum);
+                panic!("done"); // too lazy properly clean this up
+            }
+
+            // rotate image
+            complete = rotate_image(complete);
+        }
+
+        // flip image
+        for line in complete.chunks_mut(ROW_SIZE * 8) {
+            line.reverse();
         }
     }
-    println!("Part2: {}", sum);
-    panic!("done");
-
 }
 
 fn parse_tile(tile_str: String) -> Tile {
@@ -321,9 +341,9 @@ fn rotate_piece(data: Vec<u8>) -> Vec<u8> {
 fn rotate_image(data: Vec<u8>) -> Vec<u8> {
     let mut transposed: Vec<u8> = Vec::with_capacity(data.len());
     transposed.resize(data.len(), 0);
-    transpose::transpose(&data, &mut transposed, ROW_SIZE*8, COL_SIZE*8);
+    transpose::transpose(&data, &mut transposed, ROW_SIZE * 8, COL_SIZE * 8);
 
-    for line in transposed.chunks_mut(ROW_SIZE*8) {
+    for line in transposed.chunks_mut(ROW_SIZE * 8) {
         line.reverse();
     }
     transposed

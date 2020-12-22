@@ -23,6 +23,18 @@ fn recursive_game(mut p1: VecDeque<u8>, mut p2: VecDeque<u8>,  game: usize) -> b
     let mut states_p2: HashSet<VecDeque<u8>> = HashSet::new();
     let mut sub_game = game;
 
+    // optimization pointed out by user "curious_sapi3n"
+    // If player 1 has the largest card and it is larger than the size
+    // of the decks, preventing a further subgame, then player 1 is guaranteed to
+    // to win that subgame because player 2 can never claim that card
+    if game > 1 {
+        let max_p1 = p1.iter().max().unwrap();
+        let max_p2 = p2.iter().max().unwrap();
+        if max_p1 > max_p2 && *max_p1 as usize > p1.len() {
+            return true;
+        }
+    }
+
     while p1.len() > 0 && p2.len() > 0 {
 
         if states_p1.contains(&p1) || states_p2.contains(&p2) {

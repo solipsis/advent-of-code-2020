@@ -57,6 +57,49 @@ fn main() {
         println!("{:?}", directions);
     }
     println!("{}", state.len());
+
+    part2(&mut state);
+}
+
+fn part2(state: &mut HashSet<(isize, isize)>) {
+    let mut next = state.clone();
+    let adjacent: Vec<(isize, isize)> = vec![(2, 0), (-2, 0), (-1, -2), (-1, 2), (1, 2), (1, -2)];
+
+    // all hexes to consider for changes
+    let mut candidates: HashSet<(isize, isize)> = HashSet::new();
+    for (x, y) in state.iter() {
+        candidates.insert((*x,*y));
+        for (dx,dy) in &adjacent {
+            candidates.insert((x+dx, y+dy));
+        }
+    }
+
+    for (x, y) in candidates.iter() {
+        // tile is black
+        if state.contains(&(*x,*y)) {
+            let mut adj_black_count = 0;
+            for (dx, dy) in &adjacent {
+                if state.contains(&(x+dx, y+dy)) {
+                    adj_black_count += 1;
+                }
+            }
+            if adj_black_count == 0 || adj_black_count > 2 {
+                next.remove(&(*x,*y));
+            }
+        } else { // tile is white
+            let mut adj_black_count = 0;
+            for (dx, dy) in &adjacent {
+                if state.contains(&(x+dx, y+dy)) {
+                    adj_black_count += 1;
+                }
+            }
+            if adj_black_count == 2 {
+                next.insert((*x,*y));
+            }
+        }
+    }
+
+    println!("part_2: {}", next.len());
 }
 
 fn walk(dirs: &Vec<Direction>, state: &mut HashSet<(isize, isize)>) {

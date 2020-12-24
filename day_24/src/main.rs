@@ -10,6 +10,8 @@ enum Direction {
     NE,
 }
 
+const DAYS: usize = 100;
+
 fn main() {
     let input: Vec<String> = std::fs::read_to_string("input.txt").unwrap()
         .trim()
@@ -54,52 +56,55 @@ fn main() {
         }
 
         walk(&directions, &mut state);
-        println!("{:?}", directions);
     }
-    println!("{}", state.len());
+    println!("Part 1: {}", state.len());
 
-    part2(&mut state);
+    part2(state);
 }
 
-fn part2(state: &mut HashSet<(isize, isize)>) {
-    let mut next = state.clone();
-    let adjacent: Vec<(isize, isize)> = vec![(2, 0), (-2, 0), (-1, -2), (-1, 2), (1, 2), (1, -2)];
+fn part2(mut state: HashSet<(isize, isize)>) {
 
-    // all hexes to consider for changes
-    let mut candidates: HashSet<(isize, isize)> = HashSet::new();
-    for (x, y) in state.iter() {
-        candidates.insert((*x,*y));
-        for (dx,dy) in &adjacent {
-            candidates.insert((x+dx, y+dy));
-        }
-    }
+    for _x in 0..DAYS {
+        let mut next = state.clone();
+        let adjacent: Vec<(isize, isize)> = vec![(2, 0), (-2, 0), (-1, -2), (-1, 2), (1, 2), (1, -2)];
 
-    for (x, y) in candidates.iter() {
-        // tile is black
-        if state.contains(&(*x,*y)) {
-            let mut adj_black_count = 0;
-            for (dx, dy) in &adjacent {
-                if state.contains(&(x+dx, y+dy)) {
-                    adj_black_count += 1;
-                }
-            }
-            if adj_black_count == 0 || adj_black_count > 2 {
-                next.remove(&(*x,*y));
-            }
-        } else { // tile is white
-            let mut adj_black_count = 0;
-            for (dx, dy) in &adjacent {
-                if state.contains(&(x+dx, y+dy)) {
-                    adj_black_count += 1;
-                }
-            }
-            if adj_black_count == 2 {
-                next.insert((*x,*y));
+        // all hexes to consider for changes
+        let mut candidates: HashSet<(isize, isize)> = HashSet::new();
+        for (x, y) in state.iter() {
+            candidates.insert((*x,*y));
+            for (dx,dy) in &adjacent {
+                candidates.insert((x+dx, y+dy));
             }
         }
-    }
 
-    println!("part_2: {}", next.len());
+        for (x, y) in candidates.iter() {
+            // tile is black
+            if state.contains(&(*x,*y)) {
+                let mut adj_black_count = 0;
+                for (dx, dy) in &adjacent {
+                    if state.contains(&(x+dx, y+dy)) {
+                        adj_black_count += 1;
+                    }
+                }
+                if adj_black_count == 0 || adj_black_count > 2 {
+                    next.remove(&(*x,*y));
+                }
+            } else { // tile is white
+                let mut adj_black_count = 0;
+                for (dx, dy) in &adjacent {
+                    if state.contains(&(x+dx, y+dy)) {
+                        adj_black_count += 1;
+                    }
+                }
+                if adj_black_count == 2 {
+                    next.insert((*x,*y));
+                }
+            }
+        }
+        //println!("Day {}: {}", _x, next.len());
+        state = next;
+    }
+    println!("Part 2: {}", state.len());
 }
 
 fn walk(dirs: &Vec<Direction>, state: &mut HashSet<(isize, isize)>) {
